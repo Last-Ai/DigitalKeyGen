@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DigitalAuth</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+    body {
+      font-family: 'Share Tech Mono', monospace;
+      background: #111;
+      color: #eee;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      width: 90vw;
+      max-width: 900px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      box-shadow: 0 0 15px #00aaff;
+      padding: 2rem;
+      box-sizing: border-box;
+    }
+    nav {
+      margin-bottom: 2rem;
+      display: flex;
+      gap: 1.5rem;
+    }
+    nav a {
+      text-decoration: none;
+      color: #eee;
+      font-size: 1.2rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 2px solid transparent;
+      transition: border-color 0.3s ease;
+    }
+    nav a.active,
+    nav a:hover {
+      border-bottom-color: #00aaff;
+      color: #00aaff;
+    }
+    form {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+      color: #ccc;
+    }
+    input[type="number"],
+    input[type="text"],
+    select {
+      padding: 0.5rem;
+      border-radius: 4px;
+      border: none;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      width: 150px;
+      background: #222;
+      color: #eee;
+      outline: none;
+      transition: background 0.3s ease;
+    }
+    input[type="number"]:focus,
+    input[type="text"]:focus,
+    select:focus {
+      background: #333;
+      color: #00aaff;
+    }
+    button {
+      background: #00aaff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      color: #111;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      white-space: nowrap;
+    }
+    button:hover:not(:disabled) {
+      background: #0099dd;
+    }
+    button:disabled {
+      background: #004466;
+      cursor: not-allowed;
+    }
+    .message {
+      margin: 1rem 0;
+      font-size: 1rem;
+      color: #0f0;
+    }
+    .message.error {
+      color: #f00;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #333;
+      text-align: left;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    th {
+      background: #222;
+      color: #00aaff;
+    }
+    tr:hover {
+      background: #222;
+    }
+    .check-link {
+      color: #00aaff;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .check-link:hover {
+      color: #0088cc;
+    }
+    .info {
+      margin-top: 1rem;
+      font-size: 1rem;
+      color: #0af;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <a href="{{ url_for('generate') }}" class="{{ 'active' if active_tab == 'generate' else '' }}">🔧 Generate</a>
+      <a href="{{ url_for('generated') }}" class="{{ 'active' if active_tab == 'generated' else '' }}">📜 All Keys</a>
+      <a href="{{ url_for('check') }}" class="{{ 'active' if active_tab == 'check' else '' }}">🔍 Check</a>
+    </nav>
+
+    {% if message %}
+      <div class="message {% if 'Error' in message or '❌' in message %}error{% endif %}">{{ message }}</div>
+    {% endif %}
+
+    {% if active_tab == 'generate' %}
+      <h2>Generate Keys</h2>
+      <form method="POST" action="{{ url_for('generate') }}">
+        <div>
+          <label for="amount">Amount:</label>
+          <input id="amount" name="amount" type="number" min="1" value="1" required />
+        </div>
+        <div>
+          <label for="expiration">Expiration:</label>
+          <select id="expiration" name="expiration">
+            {% for key, val in expiration_options.items() %}
+              <option value="{{ key }}">{{ key }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <button type="submit">Generate</button>
+        </div>
+      </form>
+    {% elif active_tab == 'generated' %}
+      <h2>All Generated Keys</h2>
+      {% if keys %}
+        <table>
+          <thead>
+            <tr>
+              <th>License Key</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for key in keys %}
+            <tr>
+              <td><a href="{{ url_for('check_key', license_key=key.license_key) }}" class="check-link">{{ key.license_key }}</a></td>
+              <td>{{ key.client_name }}</td>
+              <td>{{ key.created_date }} {{ key.created_time }}</td>
+              <td>{{ key.expiry_date }}</td>
+              <td>{{ key.license_type }}</td>
+              <td>{{ key.status }}</td>
+            </tr>
+            {% endfor %}            
+          </tbody>
+        </table>
+      {% else %}
+        <p>No keys generated yet.</p>
+      {% endif %}
+    {% elif active_tab == 'check' %}
+      <h2>Check Key</h2>
+      <form method="POST" action="{{ url_for('check') }}">
+        <div>
+          <label for="key">License Key:</label>
+          <input id="key" name="key" type="text" placeholder="Enter license key..." required />
+        </div>
+        <div>
+          <button type="submit">Check</button>
+        </div>
+      </form>
+
+      <div class="info">
+        {% if check_error %}
+          <span style="color: #f00;">{{ check_error }}</span>
+        {% elif check_result %}
+          License Key: {{ check_result.license_key }}<br />
+          Type: {{ check_result.type }}<br />
+          Expiration: {{ check_result.expiration }}
+        {% else %}
+          Enter a license key above to check.
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>
